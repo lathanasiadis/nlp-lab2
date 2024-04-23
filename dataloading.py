@@ -31,13 +31,40 @@ class SentenceDataset(Dataset):
             word2idx (dict): a dictionary which maps words to indexes
         """
 
-        # self.data = X
-        # self.labels = y
-        # self.word2idx = word2idx
+        self.data = X
+        self.labels = y
+        self.word2idx = word2idx
 
         # EX2
-        raise NotImplementedError
 
+        self.max_len = 48
+
+        self.sentences = []
+        self.lengths = []
+
+        for sentence in X:
+            sentence = [self.word2idx.get(word, "<unk>") for word in sentence.split(" ")]
+            self.lengths.append(len(sentence))
+            if len(sentence) > self.max_len:
+                sentence = sentence[:self.max_len]
+            else:
+                for i in range(self.max_len - len(sentence)):
+                    sentence.append(0)
+            self.sentences.append(sentence)
+
+    
+        #for i in range(100):
+        #    print(self.sentences[i])
+        #    print(self.lengths[i])
+       
+        #import matplotlib.pyplot as plt
+        #print(min(len(tokenized) for tokenized in tokenized_data))
+        #print(max(len(tokenized) for tokenized in tokenized_data))
+        #plt.hist([len(tokenized) for tokenized in tokenized_data], bins=30)
+        #plt.show()
+        
+        #raise NotImplementedError        
+    
     def __len__(self):
         """
         Must return the length of the dataset, so the dataloader can know
@@ -76,7 +103,10 @@ class SentenceDataset(Dataset):
         """
 
         # EX3
+        example = self.sentences[index]
+        label = self.labels[index]
+        length = self.lengths[index]
 
-        # return example, label, length
+        return example, label, length
         raise NotImplementedError
 
