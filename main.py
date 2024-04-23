@@ -54,6 +54,8 @@ else:
     raise ValueError("Invalid dataset")
 
 # convert data labels from strings to integers
+label_encoder  = LabelEncoder()
+print("aaa")
 y_train = ...  # EX1
 y_test = ...  # EX1
 n_classes = ...  # EX1 - LabelEncoder.classes_.size
