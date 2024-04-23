@@ -55,10 +55,14 @@ else:
 
 # convert data labels from strings to integers
 label_encoder  = LabelEncoder()
-print("aaa")
-y_train = ...  # EX1
-y_test = ...  # EX1
-n_classes = ...  # EX1 - LabelEncoder.classes_.size
+y_train = label_encoder.fit_transform(y_train)  # EX1
+y_test = label_encoder.transform(y_test)  # EX1
+n_classes = label_encoder.classes_.size  # EX1 - LabelEncoder.classes_.size
+
+print("First 10 labels and their encodings")
+first_labels = y_train[:10]
+print(label_encoder.inverse_transform(first_labels))
+print(first_labels)
 
 # Define our PyTorch-based Dataset
 train_set = SentenceDataset(X_train, y_train, word2idx)
