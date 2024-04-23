@@ -53,10 +53,23 @@ elif DATASET == "MR":
 else:
     raise ValueError("Invalid dataset")
 
+le = LabelEncoder()
+le.fit(y_train)
+
 # convert data labels from strings to integers
-y_train = ...  # EX1
-y_test = ...  # EX1
-n_classes = ...  # EX1 - LabelEncoder.classes_.size
+# don't overwrite the original data yet, in order to print
+# some sample encodings
+y_train_labels = le.transform(y_train)  # EX1
+y_test = le.transform(y_test)  # EX1
+n_classes = le.classes_.size  # EX1 - LabelEncoder.classes_.size
+
+print("Encoded {} classes".format(n_classes))
+for i in range(10):
+    print("{} -> {}".format(y_train[i], y_train_labels[i]))
+
+# Overwrite original data; no longer needed
+y_train = y_train_labels
+
 
 # Define our PyTorch-based Dataset
 train_set = SentenceDataset(X_train, y_train, word2idx)
