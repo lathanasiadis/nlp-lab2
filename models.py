@@ -43,7 +43,7 @@ class BaselineDNN(nn.Module):
 
         # 5 - define the final Linear layer which maps
         # the representations to the classes
-        self.fc1 = nn.Linear(num_hidden, output_size)  # EX5
+        self.fc2 = nn.Linear(num_hidden, output_size)  # EX5
 
     def forward(self, x, lengths):
         """
