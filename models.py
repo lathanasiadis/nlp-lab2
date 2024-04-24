@@ -25,14 +25,16 @@ class BaselineDNN(nn.Module):
         super(BaselineDNN, self).__init__()
 
         # 1 - define the embedding layer
-        ...  # EX4
-
+        num_embeddings, emb_dim = embeddings.shape
+        self.embedding_layer = nn.Embedding(
+                          num_embeddings=num_embeddings, embedding_dim=emb_dim)  # EX4
+                
         # 2 - initialize the weights of our Embedding layer
         # from the pretrained word embeddings
-        ...  # EX4
+        self.embedding_layer.weight.data.copy_(embeddings)  # EX4
 
         # 3 - define if the embedding layer will be frozen or finetuned
-        ...  # EX4
+        self.embedding_layer.weight.requires_grad = trainable_emb  # EX4
 
         # 4 - define a non-linear transformation of the representations
         ...  # EX5
