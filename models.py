@@ -31,7 +31,8 @@ class BaselineDNN(nn.Module):
                 
         # 2 - initialize the weights of our Embedding layer
         # from the pretrained word embeddings
-        self.embedding_layer.weight.data.copy_(embeddings)  # EX4
+        print(embeddings.shape)
+        self.embedding_layer.weight.data.copy_(torch.Tensor(embeddings))  # EX4
 
         # 3 - define if the embedding layer will be frozen or finetuned
         self.embedding_layer.weight.requires_grad = trainable_emb  # EX4
@@ -53,18 +54,18 @@ class BaselineDNN(nn.Module):
         Returns: the logits for each class
 
         """
-
+        print("input to forward", x.shape, x)
         # 1 - embed the words, using the embedding layer
-        embeddings = ...  # EX6
-
+        embeddings = self.embedding_layer(x)  # EX6
+        print("emebds", embeddings.shape, embeddings)
         # 2 - construct a sentence representation out of the word embeddings
-        representations = ...  # EX6
-
+        representations = embeddings.sum() / self.lengths  # EX6
+        print("mean", representations.shape, representations)
         # 3 - transform the representations to new ones.
-        representations = ...  # EX6
+        representations = self.relu(self.fc1(representations))  # EX6
 
         # 4 - project the representations to classes using a linear layer
-        logits = ...  # EX6
+        logits = self.fc2(representations)  # EX6
 
         return logits
 
