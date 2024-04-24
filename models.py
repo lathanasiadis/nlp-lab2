@@ -37,11 +37,13 @@ class BaselineDNN(nn.Module):
         self.embedding_layer.weight.requires_grad = trainable_emb  # EX4
 
         # 4 - define a non-linear transformation of the representations
-        ...  # EX5
+        num_hidden = 64
+        self.fc1 = nn.Linear(emb_dim, num_hidden)
+        self.relu = nn.ReLU()  # EX5
 
         # 5 - define the final Linear layer which maps
         # the representations to the classes
-        ...  # EX5
+        self.fc1 = nn.Linear(num_hidden, output_size)  # EX5
 
     def forward(self, x, lengths):
         """
