@@ -66,13 +66,16 @@ n_classes = le.classes_.size  # EX1 - LabelEncoder.classes_.size
 print("Encoded {} classes".format(n_classes))
 for i in range(10):
     print("{} -> {}".format(y_train[i], y_train_labels[i]))
-
+print("==============================")
 # Overwrite original data; no longer needed
 y_train = y_train_labels
 
-
 # Define our PyTorch-based Dataset
 train_set = SentenceDataset(X_train, y_train, word2idx)
+for i in range(5):
+    print("Original data point: {}\nReturned by SentenceDataset: {}".format(
+        X_train[i], train_set[i]))
+
 test_set = SentenceDataset(X_test, y_test, word2idx)
 
 # EX7 - Define our PyTorch-based DataLoader

@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset
 from tqdm import tqdm
-
+import spacy
 
 class SentenceDataset(Dataset):
     """
@@ -30,13 +30,24 @@ class SentenceDataset(Dataset):
             y (list): List of training labels
             word2idx (dict): a dictionary which maps words to indexes
         """
-
-        # self.data = X
-        # self.labels = y
-        # self.word2idx = word2idx
-
         # EX2
-        raise NotImplementedError
+        nlp = spacy.blank("en")
+        # TODO: dataset-specific tokenization?
+        self.data = list(map(nlp, X))
+        
+        #  90% quantile of sentence length (in number of tokens)
+        lens = list(map(len, self.data))
+        lens.sort()
+        self.max_len = lens[int(0.9 * len(lens))]
+
+        self.labels = y
+        self.word2idx = word2idx
+
+        for i in range(10):
+            print("Sentence: {}\nLabel: {}".format(self.data[i], self.labels[i]))
+        print("max_len = {}".format(self.max_len))
+        print("<unk> embedding: {}".format(self.word2idx["<unk>"]))
+        print("==============================")
 
     def __len__(self):
         """
@@ -76,7 +87,12 @@ class SentenceDataset(Dataset):
         """
 
         # EX3
-
-        # return example, label, length
-        raise NotImplementedError
-
+        item = self.data[index][:self.max_len]
+        item_len = min(len(item), self.max_len) 
+        
+        toks = list(map(
+            lambda x: self.word2idx.get(x.text) or self.word2idx["<unk>"], item
+        ))
+        # pad
+        toks += (self.max_len - item_len) * [0]
+        return toks, self.labels[index], item_len
