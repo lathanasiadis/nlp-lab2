@@ -54,13 +54,13 @@ class BaselineDNN(nn.Module):
         Returns: the logits for each class
 
         """
-        print("input to forward", x.shape, x)
+
         # 1 - embed the words, using the embedding layer
         embeddings = self.embedding_layer(x)  # EX6
-        print("emebds", embeddings.shape, embeddings)
+
         # 2 - construct a sentence representation out of the word embeddings
-        representations = embeddings.sum() / self.lengths  # EX6
-        print("mean", representations.shape, representations)
+        representations = embeddings.sum(axis=1) / lengths.unsqueeze(1)  # EX6
+
         # 3 - transform the representations to new ones.
         representations = self.relu(self.fc1(representations))  # EX6
 

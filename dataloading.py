@@ -1,5 +1,6 @@
 from torch.utils.data import Dataset
 from tqdm import tqdm
+import numpy as np
 
 
 class SentenceDataset(Dataset):
@@ -43,14 +44,11 @@ class SentenceDataset(Dataset):
         self.lengths = []
 
         for sentence in X:
-            sentence = [self.word2idx.get(word, "<unk>") for word in sentence.split(" ")]
+            sentence = [self.word2idx.get(word, self.word2idx["<unk>"]) for word in sentence.split(" ")]
             self.lengths.append(len(sentence))
             if len(sentence) > self.max_len:
                 sentence = sentence[:self.max_len]
-            else:
-                for i in range(self.max_len - len(sentence)):
-                    sentence.append(0)
-            self.sentences.append(sentence)
+            self.sentences.append(np.pad(sentence, (0, self.max_len - len(sentence))))
 
     
         #for i in range(100):
@@ -108,5 +106,5 @@ class SentenceDataset(Dataset):
         length = self.lengths[index]
 
         return example, label, length
-        raise NotImplementedError
+        # raise NotImplementedError
 

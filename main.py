@@ -84,7 +84,7 @@ model.to(DEVICE)
 print(model)
 
 # We optimize ONLY those parameters that are trainable (p.requires_grad==True)
-criterion = torch.nn.BCEWithLogitsLoss() if n_classes == 2 else torch.nn.CrossEntropyLoss() # EX8
+criterion = torch.nn.CrossEntropyLoss() # EX8
 parameters = [p for p in model.parameters() if p.requires_grad]  # EX8
 optimizer = torch.optim.Adam(params=parameters)  # EX8
 
