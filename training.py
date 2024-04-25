@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import DataLoader, SubsetRandomSampler
 from sklearn.metrics import f1_score, accuracy_score, recall_score
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def progress(loss, epoch, batch, batch_size, dataset_size):
     """
@@ -39,25 +40,28 @@ def train_dataset(_epoch, dataloader, model, loss_function, optimizer):
         # get the inputs (batch)
         inputs, labels, lengths = batch
 
+        # EX9
         # move the batch tensors to the right device
-        ...  # EX9
+        inputs = inputs.to(DEVICE)  
+        labels = labels.to(DEVICE)
+        lengths = lengths.to(DEVICE)
 
         # Step 1 - zero the gradients
         # Remember that PyTorch accumulates gradients.
         # We need to clear them out before each batch!
-        ...  # EX9
+        optimizer.zero_grad()  # EX9
 
         # Step 2 - forward pass: y' = model(x)
-        ...  # EX9
+        pred_y = model(inputs, lengths) # EX9
 
         # Step 3 - compute loss: L = loss_function(y, y')
-        loss = ...  # EX9
+        loss = loss_function(pred_y, labels)  # EX9
 
         # Step 4 - backward pass: compute gradient wrt model parameters
-        ...  # EX9
+        loss.backward()  # EX9
 
         # Step 5 - update weights
-        ...  # EX9
+        optimizer.step() # EX9
 
         running_loss += loss.data.item()
 
@@ -91,22 +95,26 @@ def eval_dataset(dataloader, model, loss_function):
             inputs, labels, lengths = batch
 
             # Step 1 - move the batch tensors to the right device
-            ...  # EX9
+            # EX9
+            inputs = inputs.to(DEVICE)  
+            labels = labels.to(DEVICE)
+            lengths = lengths.to(DEVICE)
 
             # Step 2 - forward pass: y' = model(x)
-            ...  # EX9
+            logits = model(inputs, lengths)  # EX9
 
             # Step 3 - compute loss.
             # We compute the loss only for inspection (compare train/test loss)
             # because we do not actually backpropagate in test time
-            loss = ...  # EX9
+            loss = loss_function(logits, labels)  # EX9
 
             # Step 4 - make predictions (class = argmax of posteriors)
-            ...  # EX9
+            pred_label = logits.argmax(dim=1)  # EX9
 
             # Step 5 - collect the predictions, gold labels and batch loss
-            ...  # EX9
-
+            # EX9
+            y_pred.append(pred_label)
+            y.append(labels)
             running_loss += loss.data.item()
 
     return running_loss / index, (y_pred, y)

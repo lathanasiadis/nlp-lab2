@@ -2,7 +2,6 @@ import torch
 import numpy as np
 from torch import nn
 
-
 class BaselineDNN(nn.Module):
     """
     1. We embed the words in the input texts using an embedding layer
@@ -12,7 +11,7 @@ class BaselineDNN(nn.Module):
        to the number of classes.ngth)
     """
 
-    def __init__(self, output_size, embeddings, trainable_emb=False):
+    def __init__(self, output_size, embeddings, trainable_emb=False, hidden_size=200):
         """
 
         Args:
@@ -24,22 +23,21 @@ class BaselineDNN(nn.Module):
 
         super(BaselineDNN, self).__init__()
 
+        # EX4
         # 1 - define the embedding layer
-        ...  # EX4
-
         # 2 - initialize the weights of our Embedding layer
-        # from the pretrained word embeddings
-        ...  # EX4
-
         # 3 - define if the embedding layer will be frozen or finetuned
-        ...  # EX4
+        num_embeddings, embeddings_dim = embeddings.shape  
+        self.E = nn.Embedding.from_pretrained(torch.FloatTensor(embeddings),
+            freeze=trainable_emb)
 
         # 4 - define a non-linear transformation of the representations
-        ...  # EX5
+        self.lin1 = nn.Linear(embeddings_dim, hidden_size)
+        self.act = nn.ReLU()  # EX5
 
         # 5 - define the final Linear layer which maps
         # the representations to the classes
-        ...  # EX5
+        self.lin2 = nn.Linear(hidden_size, output_size)  # EX5
 
     def forward(self, x, lengths):
         """
@@ -47,20 +45,23 @@ class BaselineDNN(nn.Module):
         This function, defines how the data passes through the network.
 
         Returns: the logits for each class
-
         """
 
         # 1 - embed the words, using the embedding layer
-        embeddings = ...  # EX6
+        embeddings = self.E(x)  # EX6
 
         # 2 - construct a sentence representation out of the word embeddings
-        representations = ...  # EX6
+        representations = embeddings.mean(dim=1)  # EX6
+        # At this point, a BATCH_SIZE * EMB_DIM has sums of sentence
+        # embeddings in each row. By dividing each row with
+        # its non-padded length, we get an average sentence embedding
+        representations = representations / lengths[:, None]
 
         # 3 - transform the representations to new ones.
-        representations = ...  # EX6
+        representations = self.act(self.lin1(representations)) # EX6
 
         # 4 - project the representations to classes using a linear layer
-        logits = ...  # EX6
+        logits = self.lin2(representations)  # EX6
 
         return logits
 

@@ -1,3 +1,4 @@
+import numpy as np
 from torch.utils.data import Dataset
 from tqdm import tqdm
 import spacy
@@ -95,4 +96,4 @@ class SentenceDataset(Dataset):
         ))
         # pad
         toks += (self.max_len - item_len) * [0]
-        return toks, self.labels[index], item_len
+        return np.array(toks), self.labels[index], item_len
