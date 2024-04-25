@@ -43,8 +43,8 @@ def train_dataset(_epoch, dataloader, model, loss_function, optimizer):
         # EX9
         # move the batch tensors to the right device
         inputs = inputs.to(DEVICE)  
-        labels = labels.to(DEVICE)
-        lengths = lengths.to(DEVICE)
+        labels = labels.long().to(DEVICE)
+        lengths = lengths.long().to(DEVICE)
 
         # Step 1 - zero the gradients
         # Remember that PyTorch accumulates gradients.
@@ -97,8 +97,8 @@ def eval_dataset(dataloader, model, loss_function):
             # Step 1 - move the batch tensors to the right device
             # EX9
             inputs = inputs.to(DEVICE)  
-            labels = labels.to(DEVICE)
-            lengths = lengths.to(DEVICE)
+            labels = labels.long().to(DEVICE)
+            lengths = lengths.long().to(DEVICE)
 
             # Step 2 - forward pass: y' = model(x)
             logits = model(inputs, lengths)  # EX9
