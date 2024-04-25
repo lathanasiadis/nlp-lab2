@@ -51,7 +51,7 @@ class BaselineDNN(nn.Module):
         embeddings = self.E(x)  # EX6
 
         # 2 - construct a sentence representation out of the word embeddings
-        representations = embeddings.mean(dim=1)  # EX6
+        representations = embeddings.sum(dim=1)  # EX6
         # At this point, a BATCH_SIZE * EMB_DIM has sums of sentence
         # embeddings in each row. By dividing each row with
         # its non-padded length, we get an average sentence embedding

@@ -90,10 +90,7 @@ class SentenceDataset(Dataset):
         # EX3
         item = self.data[index][:self.max_len]
         item_len = min(len(item), self.max_len) 
-        
         toks = list(map(
             lambda x: self.word2idx.get(x.text) or self.word2idx["<unk>"], item
         ))
-        # pad
-        toks += (self.max_len - item_len) * [0]
-        return np.array(toks), self.labels[index], item_len
+        return np.pad(toks, (0, self.max_len - item_len)), self.labels[index], item_len
