@@ -34,6 +34,7 @@ class SentenceDataset(Dataset):
         # EX2
         nlp = spacy.blank("en")
         # TODO: dataset-specific tokenization?
+        # NLTK has tweet tokenizer
         self.data = list(map(nlp, X))
         
         #  90% quantile of sentence length (in number of tokens)

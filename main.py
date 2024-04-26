@@ -101,7 +101,8 @@ criterion = nn.CrossEntropyLoss()  # EX8
 # (EX4) Freeze embedding layer
 for param in model.E.parameters():
     param.requires_grad = False
-parameters = model.parameters()  # EX8
+# parameters = [param for param in model.parameters() if param.requires_grad]  # EX8
+parameters = model.parameters()
 optimizer = torch.optim.Adam(parameters)  # EX8
 
 #############################################################################
