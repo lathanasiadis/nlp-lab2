@@ -70,7 +70,7 @@ def train_dataset(_epoch, dataloader, model, loss_function, optimizer):
                  epoch=_epoch,
                  batch=index,
                  batch_size=dataloader.batch_size,
-                 dataset_size=len(dataloader.dataset))
+                 dataset_size=len(dataloader.sampler))
 
     return running_loss / index
 

@@ -11,7 +11,7 @@ from matplotlib import pyplot as plt
 from config import EMB_PATH
 from dataloading import SentenceDataset
 from models import BaselineDNN
-from training import train_dataset, eval_dataset, get_metrics_report
+from training import train_dataset, eval_dataset, get_metrics_report, torch_train_val_split
 from utils.load_datasets import load_MR, load_Semeval2017A
 from utils.load_embeddings import load_word_vectors
 
@@ -79,7 +79,9 @@ for i in range(5):
 test_set = SentenceDataset(X_test, y_test, word2idx)
 
 # EX7 - Define our PyTorch-based DataLoader
-train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True) # EX7
+# train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True) # EX7
+
+train_loader, val_loader = torch_train_val_split(train_set, BATCH_SIZE, BATCH_SIZE)
 test_loader = DataLoader(test_set, batch_size=BATCH_SIZE) # EX7
 
 #############################################################################
