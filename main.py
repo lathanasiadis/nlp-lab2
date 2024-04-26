@@ -11,9 +11,11 @@ from matplotlib import pyplot as plt
 from config import EMB_PATH
 from dataloading import SentenceDataset
 from models import BaselineDNN
-from training import train_dataset, eval_dataset
+from training import train_dataset, eval_dataset, get_metrics_report
 from utils.load_datasets import load_MR, load_Semeval2017A
 from utils.load_embeddings import load_word_vectors
+
+from IPython import embed
 
 warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
 
@@ -58,19 +60,15 @@ else:
 le = LabelEncoder()
 le.fit(y_train)
 
-# convert data labels from strings to integers
-# don't overwrite the original data yet, in order to print
-# some sample encodings
-y_train_labels = le.transform(y_train)  # EX1
+y_train = le.transform(y_train)  # EX1
 y_test = le.transform(y_test)  # EX1
 n_classes = le.classes_.size  # EX1 - LabelEncoder.classes_.size
 
+# EX1: Print some sample encodings
+sample_classes = le.inverse_transform(y_train[:10])
 print("Encoded {} classes".format(n_classes))
 for i in range(10):
-    print("{} -> {}".format(y_train[i], y_train_labels[i]))
-print("==============================")
-# Overwrite original data; no longer needed
-y_train = y_train_labels
+    print("{} -> {}".format(sample_classes[i], y_train[i]))
 
 # Define our PyTorch-based Dataset
 train_set = SentenceDataset(X_train, y_train, word2idx)
@@ -111,6 +109,10 @@ optimizer = torch.optim.Adam(parameters)  # EX8
 
 train_losses = []
 test_losses = []
+y_train_pred = None
+y_train_gold = None
+y_test_pred = None
+y_test_gold = None
 
 for epoch in range(1, EPOCHS + 1):
     # train the model for one epoch
@@ -132,3 +134,8 @@ plt.plot(range(i), train_losses, label="train loss")
 plt.plot(range(i), test_losses, label="test loss")
 plt.legend()
 plt.show()
+
+print("Classification report (train set)")
+print(get_metrics_report(y_train_gold, y_train_pred))
+print("Classification report (test set)")
+print(get_metrics_report(y_test_gold, y_test_pred))
