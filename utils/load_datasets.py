@@ -61,8 +61,8 @@ def load_from_dir(path):
 
 
 def load_Semeval2017A():
-    train = load_from_dir(os.path.join(DATA_PATH, "Semeval2017A/train_dev"))
-    test = load_from_dir(os.path.join(DATA_PATH, "Semeval2017A/gold"))
+    train = load_from_dir(os.path.join(DATA_PATH, "Semeval2017A","train_dev"))
+    test = load_from_dir(os.path.join(DATA_PATH, "Semeval2017A","gold"))
 
     X_train = [x[1] for x in train]
     y_train = [x[0] for x in train]
