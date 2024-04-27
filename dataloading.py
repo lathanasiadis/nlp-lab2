@@ -44,8 +44,9 @@ class SentenceDataset(Dataset):
         self.labels = y
         self.word2idx = word2idx
 
-        for i in range(10):
-            print("Sentence: {}\nLabel: {}".format(self.data[i], self.labels[i]))
+        # for i in range(10):
+        #     print("Sentence: {}\nLabel: {}".format(X[i], y[i]))
+        
         print("max_len = {}".format(self.max_len))
         print("<unk> embedding: {}".format(self.word2idx["<unk>"]))
         print("==============================")
@@ -89,7 +90,7 @@ class SentenceDataset(Dataset):
 
         # EX3
         item = self.data[index][:self.max_len]
-        item_len = min(len(item), self.max_len) 
+        item_len = min(len(item), self.max_len)
         toks = list(map(
             lambda x: self.word2idx.get(x) or self.word2idx["<unk>"], item
         ))

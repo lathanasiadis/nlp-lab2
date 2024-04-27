@@ -29,7 +29,7 @@ class BaselineDNN(nn.Module):
         # 3 - define if the embedding layer will be frozen or finetuned
         num_embeddings, embeddings_dim = embeddings.shape  
         self.E = nn.Embedding.from_pretrained(torch.FloatTensor(embeddings),
-            freeze=trainable_emb)
+            freeze=not trainable_emb)
 
         # 4 - define a non-linear transformation of the representations
         self.lin1 = nn.Linear(embeddings_dim, hidden_size)

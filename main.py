@@ -70,15 +70,15 @@ n_classes = le.classes_.size  # EX1 - LabelEncoder.classes_.size
 
 # EX1: Print some sample encodings
 sample_classes = le.inverse_transform(y_train[:10])
-print("Encoded {} classes".format(n_classes))
-for i in range(10):
-    print("{} -> {}".format(sample_classes[i], y_train[i]))
+# print("Encoded {} classes".format(n_classes))
+# for i in range(10):
+#     print("{} -> {}".format(sample_classes[i], y_train[i]))
 
 # Define our PyTorch-based Dataset
 train_set = SentenceDataset(X_train, y_train, word2idx, tweets=(DATASET == "Semeval2017A"))
 for i in range(5):
-    print("Original data point: {}\nReturned by SentenceDataset: {}".format(
-        X_train[i], train_set[i]))
+    print("Example #{}".format(i+1))
+    print("{}\n{}".format(X_train[i], train_set[i]))
 
 test_set = SentenceDataset(X_test, y_test, word2idx, tweets=(DATASET == "Semeval2017A"))
 
@@ -102,13 +102,9 @@ print(model)
 
 # We optimize ONLY those parameters that are trainable (p.requires_grad==True)
 criterion = nn.CrossEntropyLoss()  # EX8
-# criterion = nn.BCEWithLogitsLoss() if n_classes == 2 else nn.CrossEntropyLoss()  # EX8
-# (EX4) Freeze embedding layer
-for param in model.E.parameters():
-    param.requires_grad = False
-# parameters = [param for param in model.parameters() if param.requires_grad]  # EX8
-parameters = model.parameters()
+parameters = [param for param in model.parameters() if param.requires_grad]  # EX8
 optimizer = torch.optim.Adam(parameters)  # EX8
+
 
 #############################################################################
 # Training Pipeline
@@ -142,11 +138,10 @@ for epoch in range(1, EPOCHS + 1):
         was_early_stop = True
         break
 
-
 i = len(train_losses)
 x_axis = range(1, i+1)
 plt.plot(x_axis, train_losses, label="Train set")
-plt.plot(x_axis, val_losses, label = "Validation set")
+plt.plot(x_axis, val_losses, label="Validation set")
 plt.plot(x_axis, test_losses, label="Test set")
 plt.xticks(x_axis)
 if was_early_stop:
