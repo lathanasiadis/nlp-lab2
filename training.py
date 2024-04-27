@@ -70,7 +70,7 @@ def train_dataset(_epoch, dataloader, model, loss_function, optimizer):
                  epoch=_epoch,
                  batch=index,
                  batch_size=dataloader.batch_size,
-                 dataset_size=len(dataloader.dataset))
+                 dataset_size=len(dataloader.sampler))
 
     return running_loss / index
 
@@ -113,8 +113,8 @@ def eval_dataset(dataloader, model, loss_function):
 
             # Step 5 - collect the predictions, gold labels and batch loss
             # EX9
-            y_pred.append(pred_label)
-            y.append(labels)
+            y_pred.append(pred_label.cpu())
+            y.append(labels.cpu())
             running_loss += loss.data.item()
 
     return running_loss / index, (y_pred, y)

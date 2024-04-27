@@ -11,7 +11,8 @@ from matplotlib import pyplot as plt
 from config import EMB_PATH
 from dataloading import SentenceDataset
 from models import BaselineDNN
-from training import train_dataset, eval_dataset, get_metrics_report
+from early_stopper import EarlyStopper
+from training import train_dataset, eval_dataset, get_metrics_report, torch_train_val_split
 from utils.load_datasets import load_MR, load_Semeval2017A
 from utils.load_embeddings import load_word_vectors
 
@@ -40,6 +41,9 @@ DATASET = "MR"  # options: "MR", "Semeval2017A"
 
 # if your computer has a CUDA compatible gpu use it, otherwise use the cpu
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+MODEL_PATH = "best_model.pt"
+PATIENCE = 5
 
 ########################################################
 # Define PyTorch datasets and dataloaders
@@ -79,7 +83,8 @@ for i in range(5):
 test_set = SentenceDataset(X_test, y_test, word2idx)
 
 # EX7 - Define our PyTorch-based DataLoader
-train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True) # EX7
+# train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True) # EX7
+train_loader, val_loader = torch_train_val_split(train_set, BATCH_SIZE, BATCH_SIZE)
 test_loader = DataLoader(test_set, batch_size=BATCH_SIZE) # EX7
 
 #############################################################################
@@ -88,6 +93,8 @@ test_loader = DataLoader(test_set, batch_size=BATCH_SIZE) # EX7
 model = BaselineDNN(output_size=n_classes,  # EX8
                     embeddings=embeddings,
                     trainable_emb=EMB_TRAINABLE)
+
+stopper = EarlyStopper(model, MODEL_PATH, PATIENCE, min_delta=1e-4)
 
 # move the mode weight to cpu or gpu
 model.to(DEVICE)
@@ -108,11 +115,9 @@ optimizer = torch.optim.Adam(parameters)  # EX8
 #############################################################################
 
 train_losses = []
+val_losses = []
 test_losses = []
-y_train_pred = None
-y_train_gold = None
-y_test_pred = None
-y_test_gold = None
+was_early_stop = False
 
 for epoch in range(1, EPOCHS + 1):
     # train the model for one epoch
@@ -122,20 +127,52 @@ for epoch in range(1, EPOCHS + 1):
     train_loss, (y_train_gold, y_train_pred) = eval_dataset(train_loader,
                                                             model,
                                                             criterion)
+    val_loss, (y_val_gold, y_val_pred) = eval_dataset(val_loader,
+                                                      model,
+                                                      criterion)
     test_loss, (y_test_gold, y_test_pred) = eval_dataset(test_loader,
                                                          model,
                                                          criterion)
     train_losses.append(train_loss)
+    val_losses.append(val_loss)
     test_losses.append(test_loss)
+
+    if stopper.early_stop(val_loss):
+        print("Early stop!")
+        was_early_stop = True
+        break
 
 
 i = len(train_losses)
-plt.plot(range(i), train_losses, label="train loss")
-plt.plot(range(i), test_losses, label="test loss")
+x_axis = range(1, i+1)
+plt.plot(x_axis, train_losses, label="Train set")
+plt.plot(x_axis, val_losses, label = "Validation set")
+plt.plot(x_axis, test_losses, label="Test set")
+plt.xticks(x_axis)
+if was_early_stop:
+    plt.axvline(i - PATIENCE, linestyle="--", label="Early Stop", color="red")
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
 plt.legend()
+plt.savefig("graph.png")
 plt.show()
+
+if was_early_stop:
+    best = torch.load(MODEL_PATH)
+    model.load_state_dict(best)
+    train_loss, (y_train_gold, y_train_pred) = eval_dataset(train_loader,
+                                                            model,
+                                                            criterion)
+    val_loss, (y_val_gold, y_val_pred) = eval_dataset(val_loader,
+                                                      model,
+                                                      criterion)
+    test_loss, (y_test_gold, y_test_pred) = eval_dataset(test_loader,
+                                                         model,
+                                                         criterion)
 
 print("Classification report (train set)")
 print(get_metrics_report(y_train_gold, y_train_pred))
+print("Classification report (val set)")
+print(get_metrics_report(y_val_gold, y_val_pred))
 print("Classification report (test set)")
 print(get_metrics_report(y_test_gold, y_test_pred))
