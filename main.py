@@ -37,7 +37,7 @@ EMB_DIM = 50
 EMB_TRAINABLE = False
 BATCH_SIZE = 128
 EPOCHS = 50
-DATASET = "Semeval2017A"  # options: "MR", "Semeval2017A"
+DATASET = "MR"  # options: "MR", "Semeval2017A"
 
 # if your computer has a CUDA compatible gpu use it, otherwise use the cpu
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -75,12 +75,12 @@ for i in range(10):
     print("{} -> {}".format(sample_classes[i], y_train[i]))
 
 # Define our PyTorch-based Dataset
-train_set = SentenceDataset(X_train, y_train, word2idx)
+train_set = SentenceDataset(X_train, y_train, word2idx, tweets=(DATASET == "Semeval2017A"))
 for i in range(5):
     print("Original data point: {}\nReturned by SentenceDataset: {}".format(
         X_train[i], train_set[i]))
 
-test_set = SentenceDataset(X_test, y_test, word2idx)
+test_set = SentenceDataset(X_test, y_test, word2idx, tweets=(DATASET == "Semeval2017A"))
 
 # EX7 - Define our PyTorch-based DataLoader
 # train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True) # EX7
