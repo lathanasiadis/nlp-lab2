@@ -95,17 +95,23 @@ class LSTM(nn.Module):
     def forward(self, x, lengths):
         batch_size, max_length = x.shape
         embeddings = self.embeddings(x)
+
+        # supposedly lengths needs to be on the cpu for pack_padded_sequence to work
         X = torch.nn.utils.rnn.pack_padded_sequence(
-            embeddings, lengths, batch_first=True, enforce_sorted=False)
+            embeddings, lengths.cpu(), batch_first=True, enforce_sorted=False)
 
         ht, _ = self.lstm(X)
-
+   
         # ht is batch_size x max(lengths) x hidden_dim
         ht, _ = torch.nn.utils.rnn.pad_packed_sequence(ht, batch_first=True)
 
         # pick the output of the lstm corresponding to the last word
         # TODO: Main-Lab-Q2 (Hint: take actual lengths into consideration)
-        representations = ...
+        
+        last_timestep_indices = ((lengths - 1).view(-1, 1, 1)
+                                 .expand(len(lengths), 1, ht.size(2)))
+          
+        representations = ht.gather(1, last_timestep_indices).squeeze(1)
 
         logits = self.linear(representations)
 
