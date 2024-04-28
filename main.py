@@ -116,41 +116,44 @@ optimizer = torch.optim.Adam(parameters)  # EX8
 # Training Pipeline
 #############################################################################
 
-train_losses = []
-val_losses = []
-test_losses = []
-was_early_stop = False
+def train_model(model, train_loader, val_loader, criterion, optimizer, print_freq=None):
+    train_losses = []
+    val_losses = []
+    was_early_stop = False
 
-for epoch in range(1, EPOCHS + 1):
-    # train the model for one epoch
-    train_dataset(epoch, train_loader, model, criterion, optimizer)
+    for epoch in range(1, EPOCHS + 1):
+        # train the model for one epoch
+        train_dataset(epoch, train_loader, model, criterion, optimizer)
 
-    # evaluate the performance of the model, on both data sets
-    train_loss, (y_train_gold, y_train_pred) = eval_dataset(train_loader,
-                                                            model,
-                                                            criterion)
-    val_loss, (y_val_gold, y_val_pred) = eval_dataset(val_loader,
-                                                      model,
-                                                      criterion)
-    test_loss, (y_test_gold, y_test_pred) = eval_dataset(test_loader,
-                                                         model,
-                                                         criterion)
-    train_losses.append(train_loss)
-    val_losses.append(val_loss)
-    test_losses.append(test_loss)
+        # evaluate the performance of the model, on both data sets
+        train_loss, (y_train_gold, y_train_pred) = eval_dataset(train_loader,
+                                                                model,
+                                                                criterion)
+        val_loss, (y_val_gold, y_val_pred) = eval_dataset(val_loader,
+                                                          model,
+                                                          criterion)
 
-    if stopper.early_stop(val_loss):
-        print("Early stop!")
-        was_early_stop = True
-        break
+        train_losses.append(train_loss)
+        val_losses.append(val_loss)
+
+        if print_freq is not None and epoch % print_freq == 0:
+            print(f"Epoch: {epoch}")
+            print(f"Train Loss: {train_loss}")
+            print(f"Validation Loss: {val_loss}\n")
+            
+        if stopper.early_stop(val_loss):
+            print("Early stop!")
+            was_early_stop = True
+            break
+    
+    return train_losses, val_losses, was_early_stop
 
 
-def plot_loss_curves(train_losses, val_losses, test_losses, save_path=None):
+def plot_loss_curves(train_losses, val_losses, was_early_stop, save_path=None):
     i = len(train_losses)
     x_axis = range(1, i+1)
     plt.plot(x_axis, train_losses, label="Train set")
     plt.plot(x_axis, val_losses, label="Validation set")
-    plt.plot(x_axis, test_losses, label="Test set")
     plt.xticks(x_axis)
     if was_early_stop:
         plt.axvline(i - PATIENCE, linestyle="--",
@@ -165,25 +168,19 @@ def plot_loss_curves(train_losses, val_losses, test_losses, save_path=None):
     plt.show()
 
 
-plot_loss_curves(train_losses, val_losses, test_losses)
+train_losses, val_losses, was_early_stop = train_model(
+      model, train_loader, val_loader, criterion, optimizer, print_freq=None)
+
+plot_loss_curves(train_losses, val_losses, was_early_stop)
 
     
 if was_early_stop:
     best = torch.load(MODEL_PATH)
     model.load_state_dict(best)
-    train_loss, (y_train_gold, y_train_pred) = eval_dataset(train_loader,
-                                                            model,
-                                                            criterion)
-    val_loss, (y_val_gold, y_val_pred) = eval_dataset(val_loader,
-                                                      model,
-                                                      criterion)
-    test_loss, (y_test_gold, y_test_pred) = eval_dataset(test_loader,
-                                                         model,
-                                                         criterion)
+    
+test_loss, (y_test_gold, y_test_pred) = eval_dataset(test_loader,
+                                                     model,
+                                                     criterion)
 
-print("Classification report (train set)")
-print(get_metrics_report(y_train_gold, y_train_pred))
-print("Classification report (val set)")
-print(get_metrics_report(y_val_gold, y_val_pred))
 print("Classification report (test set)")
 print(get_metrics_report(y_test_gold, y_test_pred))
