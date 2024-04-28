@@ -18,7 +18,8 @@ def progress(loss, epoch, batch, batch_size, dataset_size):
 
     bar = '=' * filled_len + '-' * (bar_len - filled_len)
 
-    status = 'Epoch {}, Loss: {:.4f}'.format(epoch, loss)
+    # status = 'Epoch {}, Loss: {:.4f}'.format(epoch, loss)
+    status = 'Epoch {}'.format(epoch, loss)
     _progress_str = "\r \r [{}] ...{}".format(bar, status)
     sys.stdout.write(_progress_str)
     sys.stdout.flush()

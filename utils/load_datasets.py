@@ -64,10 +64,10 @@ def load_Semeval2017A():
     train = load_from_dir(os.path.join(DATA_PATH, "Semeval2017A","train_dev"))
     test = load_from_dir(os.path.join(DATA_PATH, "Semeval2017A","gold"))
 
-    X_train = [x[1] for x in train]
-    y_train = [x[0] for x in train]
-    X_test = [x[1] for x in test]
-    y_test = [x[0] for x in test]
+    X_train = [x[1].lower() for x in train]
+    y_train = [x[0].lower() for x in train]
+    X_test = [x[1].lower() for x in test]
+    y_test = [x[0].lower() for x in test]
 
     return X_train, y_train, X_test, y_test
 

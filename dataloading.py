@@ -15,7 +15,8 @@ class SentenceDataset(Dataset):
             processed data-item from our dataset with a given index
     """
 
-    def __init__(self, X, y, word2idx, tweets=False):
+    def __init__(self, X, y, word2idx, tweets=False, verbose=False):
+
         """
         In the initialization of the dataset we will have to assign the
         input values to the corresponding class attributes
@@ -44,12 +45,13 @@ class SentenceDataset(Dataset):
         self.labels = y
         self.word2idx = word2idx
 
-        # for i in range(10):
-        #     print("Sentence: {}\nLabel: {}".format(X[i], y[i]))
+        if verbose:
+            for i in range(10):
+                print("Sentence: {}\nLabel: {}".format(X[i], y[i]))
         
-        print("max_len = {}".format(self.max_len))
-        print("<unk> embedding: {}".format(self.word2idx["<unk>"]))
-        print("==============================")
+            print("max_len = {}".format(self.max_len))
+            print("<unk> embedding: {}".format(self.word2idx["<unk>"]))
+            print("==============================")
 
     def __len__(self):
         """

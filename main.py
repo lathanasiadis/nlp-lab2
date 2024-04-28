@@ -37,13 +37,15 @@ EMB_DIM = 50
 EMB_TRAINABLE = False
 BATCH_SIZE = 128
 EPOCHS = 50
-DATASET = "Semeval2017A"  # options: "MR", "Semeval2017A"
+DATASET = "MR"  # options: "MR", "Semeval2017A"
 
 # if your computer has a CUDA compatible gpu use it, otherwise use the cpu
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-MODEL_PATH = "best_model.pt"
+MODEL_PATH = "model_dnn.pt"
 PATIENCE = 5
+
+SHOULD_PRINT_PRE = False
 
 ########################################################
 # Define PyTorch datasets and dataloaders
@@ -70,17 +72,21 @@ n_classes = le.classes_.size  # EX1 - LabelEncoder.classes_.size
 
 # EX1: Print some sample encodings
 sample_classes = le.inverse_transform(y_train[:10])
-print("Encoded {} classes".format(n_classes))
-for i in range(10):
-    print("{} -> {}".format(sample_classes[i], y_train[i]))
+if SHOULD_PRINT_PRE:
+    print("Encoded {} classes".format(n_classes))
+    for i in range(10):
+        print("{} -> {}".format(sample_classes[i], y_train[i]))
 
 # Define our PyTorch-based Dataset
-train_set = SentenceDataset(X_train, y_train, word2idx)
-for i in range(5):
-    print("Original data point: {}\nReturned by SentenceDataset: {}".format(
-        X_train[i], train_set[i]))
+train_set = SentenceDataset(X_train, y_train, word2idx,
+                            tweets=(DATASET == "Semeval2017A"), verbose=SHOULD_PRINT_PRE)
+if SHOULD_PRINT_PRE:
+    for i in range(5):
+        print("Example #{}".format(i+1))
+        print("{}\n{}".format(X_train[i], train_set[i]))
 
-test_set = SentenceDataset(X_test, y_test, word2idx)
+test_set = SentenceDataset(X_test, y_test, word2idx,
+                           tweets=(DATASET == "Semeval2017A"), verbose=SHOULD_PRINT_PRE)
 
 # EX7 - Define our PyTorch-based DataLoader
 # train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True) # EX7
@@ -102,77 +108,79 @@ print(model)
 
 # We optimize ONLY those parameters that are trainable (p.requires_grad==True)
 criterion = nn.CrossEntropyLoss()  # EX8
-# criterion = nn.BCEWithLogitsLoss() if n_classes == 2 else nn.CrossEntropyLoss()  # EX8
-# (EX4) Freeze embedding layer
-for param in model.E.parameters():
-    param.requires_grad = False
-# parameters = [param for param in model.parameters() if param.requires_grad]  # EX8
-parameters = model.parameters()
+parameters = [param for param in model.parameters() if param.requires_grad]  # EX8
 optimizer = torch.optim.Adam(parameters)  # EX8
+
 
 #############################################################################
 # Training Pipeline
 #############################################################################
 
-train_losses = []
-val_losses = []
-test_losses = []
-was_early_stop = False
+def train_model(model, train_loader, val_loader, criterion, optimizer, print_freq=None):
+    train_losses = []
+    val_losses = []
+    was_early_stop = False
 
-for epoch in range(1, EPOCHS + 1):
-    # train the model for one epoch
-    train_dataset(epoch, train_loader, model, criterion, optimizer)
+    for epoch in range(1, EPOCHS + 1):
+        # train the model for one epoch
+        train_dataset(epoch, train_loader, model, criterion, optimizer)
 
-    # evaluate the performance of the model, on both data sets
-    train_loss, (y_train_gold, y_train_pred) = eval_dataset(train_loader,
-                                                            model,
-                                                            criterion)
-    val_loss, (y_val_gold, y_val_pred) = eval_dataset(val_loader,
-                                                      model,
-                                                      criterion)
-    test_loss, (y_test_gold, y_test_pred) = eval_dataset(test_loader,
-                                                         model,
-                                                         criterion)
-    train_losses.append(train_loss)
-    val_losses.append(val_loss)
-    test_losses.append(test_loss)
+        # evaluate the performance of the model, on both data sets
+        train_loss, (y_train_gold, y_train_pred) = eval_dataset(train_loader,
+                                                                model,
+                                                                criterion)
+        val_loss, (y_val_gold, y_val_pred) = eval_dataset(val_loader,
+                                                          model,
+                                                          criterion)
 
-    if stopper.early_stop(val_loss):
-        print("Early stop!")
-        was_early_stop = True
-        break
+        train_losses.append(train_loss)
+        val_losses.append(val_loss)
+
+        if print_freq is not None and epoch % print_freq == 0:
+            print(f"Epoch: {epoch}")
+            print(f"Train Loss: {train_loss}")
+            print(f"Validation Loss: {val_loss}\n")
+            
+        if stopper.early_stop(val_loss):
+            print("Early stop!")
+            was_early_stop = True
+            break
+    
+    return train_losses, val_losses, was_early_stop
 
 
-i = len(train_losses)
-x_axis = range(1, i+1)
-plt.plot(x_axis, train_losses, label="Train set")
-plt.plot(x_axis, val_losses, label = "Validation set")
-plt.plot(x_axis, test_losses, label="Test set")
-plt.xticks(x_axis)
-if was_early_stop:
-    plt.axvline(i - PATIENCE, linestyle="--", label="Early Stop", color="red")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.legend()
-plt.savefig("graph.png")
-plt.show()
+def plot_loss_curves(train_losses, val_losses, was_early_stop, save_path=None):
+    i = len(train_losses)
+    x_axis = range(1, i+1)
+    plt.plot(x_axis, train_losses, label="Train set")
+    plt.plot(x_axis, val_losses, label="Validation set")
+    plt.xticks(x_axis)
+    if was_early_stop:
+        plt.axvline(i - PATIENCE, linestyle="--",
+                    label="Early Stop", color="red")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend()
+    # control maximum number of ticks on x axis
+    plt.gca().xaxis.set_major_locator(plt.MaxNLocator(integer=True, nbins=18))
+    if save_path is not None:
+        plt.savefig(save_path)
+    plt.show()
 
+
+train_losses, val_losses, was_early_stop = train_model(
+      model, train_loader, val_loader, criterion, optimizer, print_freq=None)
+
+plot_loss_curves(train_losses, val_losses, was_early_stop)
+
+    
 if was_early_stop:
     best = torch.load(MODEL_PATH)
     model.load_state_dict(best)
-    train_loss, (y_train_gold, y_train_pred) = eval_dataset(train_loader,
-                                                            model,
-                                                            criterion)
-    val_loss, (y_val_gold, y_val_pred) = eval_dataset(val_loader,
-                                                      model,
-                                                      criterion)
-    test_loss, (y_test_gold, y_test_pred) = eval_dataset(test_loader,
-                                                         model,
-                                                         criterion)
+    
+test_loss, (y_test_gold, y_test_pred) = eval_dataset(test_loader,
+                                                     model,
+                                                     criterion)
 
-print("Classification report (train set)")
-print(get_metrics_report(y_train_gold, y_train_pred))
-print("Classification report (val set)")
-print(get_metrics_report(y_val_gold, y_val_pred))
 print("Classification report (test set)")
 print(get_metrics_report(y_test_gold, y_test_pred))
