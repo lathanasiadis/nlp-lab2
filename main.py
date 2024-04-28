@@ -42,8 +42,10 @@ DATASET = "MR"  # options: "MR", "Semeval2017A"
 # if your computer has a CUDA compatible gpu use it, otherwise use the cpu
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-MODEL_PATH = "best_model.pt"
+MODEL_PATH = "model_dnn.pt"
 PATIENCE = 5
+
+SHOULD_PRINT_PRE = False
 
 ########################################################
 # Define PyTorch datasets and dataloaders
@@ -70,17 +72,21 @@ n_classes = le.classes_.size  # EX1 - LabelEncoder.classes_.size
 
 # EX1: Print some sample encodings
 sample_classes = le.inverse_transform(y_train[:10])
-# print("Encoded {} classes".format(n_classes))
-# for i in range(10):
-#     print("{} -> {}".format(sample_classes[i], y_train[i]))
+if SHOULD_PRINT_PRE:
+    print("Encoded {} classes".format(n_classes))
+    for i in range(10):
+        print("{} -> {}".format(sample_classes[i], y_train[i]))
 
 # Define our PyTorch-based Dataset
-train_set = SentenceDataset(X_train, y_train, word2idx, tweets=(DATASET == "Semeval2017A"))
-for i in range(5):
-    print("Example #{}".format(i+1))
-    print("{}\n{}".format(X_train[i], train_set[i]))
+train_set = SentenceDataset(X_train, y_train, word2idx,
+                            tweets=(DATASET == "Semeval2017A"), verbose=SHOULD_PRINT_PRE)
+if SHOULD_PRINT_PRE:
+    for i in range(5):
+        print("Example #{}".format(i+1))
+        print("{}\n{}".format(X_train[i], train_set[i]))
 
-test_set = SentenceDataset(X_test, y_test, word2idx, tweets=(DATASET == "Semeval2017A"))
+test_set = SentenceDataset(X_test, y_test, word2idx,
+                           tweets=(DATASET == "Semeval2017A"), verbose=SHOULD_PRINT_PRE)
 
 # EX7 - Define our PyTorch-based DataLoader
 # train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True) # EX7
@@ -138,20 +144,30 @@ for epoch in range(1, EPOCHS + 1):
         was_early_stop = True
         break
 
-i = len(train_losses)
-x_axis = range(1, i+1)
-plt.plot(x_axis, train_losses, label="Train set")
-plt.plot(x_axis, val_losses, label="Validation set")
-plt.plot(x_axis, test_losses, label="Test set")
-plt.xticks(x_axis)
-if was_early_stop:
-    plt.axvline(i - PATIENCE, linestyle="--", label="Early Stop", color="red")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.legend()
-plt.savefig("graph.png")
-plt.show()
 
+def plot_loss_curves(train_losses, val_losses, test_losses, save_path=None):
+    i = len(train_losses)
+    x_axis = range(1, i+1)
+    plt.plot(x_axis, train_losses, label="Train set")
+    plt.plot(x_axis, val_losses, label="Validation set")
+    plt.plot(x_axis, test_losses, label="Test set")
+    plt.xticks(x_axis)
+    if was_early_stop:
+        plt.axvline(i - PATIENCE, linestyle="--",
+                    label="Early Stop", color="red")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend()
+    # control maximum number of ticks on x axis
+    plt.gca().xaxis.set_major_locator(plt.MaxNLocator(integer=True, nbins=18))
+    if save_path is not None:
+        plt.savefig(save_path)
+    plt.show()
+
+
+plot_loss_curves(train_losses, val_losses, test_losses)
+
+    
 if was_early_stop:
     best = torch.load(MODEL_PATH)
     model.load_state_dict(best)
