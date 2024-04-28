@@ -1,7 +1,7 @@
 import numpy as np
 from torch.utils.data import Dataset
 from tqdm import tqdm
-import spacy
+from nltk.tokenize import word_tokenize, TweetTokenizer
 
 class SentenceDataset(Dataset):
     """
@@ -15,7 +15,7 @@ class SentenceDataset(Dataset):
             processed data-item from our dataset with a given index
     """
 
-    def __init__(self, X, y, word2idx, verbose=False):
+    def __init__(self, X, y, word2idx, tweets=False):
         """
         In the initialization of the dataset we will have to assign the
         input values to the corresponding class attributes
@@ -32,10 +32,9 @@ class SentenceDataset(Dataset):
             word2idx (dict): a dictionary which maps words to indexes
         """
         # EX2
-        nlp = spacy.blank("en")
-        # TODO: dataset-specific tokenization?
-        # NLTK has tweet tokenizer
-        self.data = list(map(nlp, X))
+        tt = TweetTokenizer()
+        tokenizer = tt.tokenize if tweets else word_tokenize
+        self.data = list(map(tokenizer, X))
         
         #  90% quantile of sentence length (in number of tokens)
         lens = list(map(len, self.data))
@@ -45,12 +44,12 @@ class SentenceDataset(Dataset):
         self.labels = y
         self.word2idx = word2idx
 
-        if verbose:
-            for i in range(10):
-                print("Sentence: {}\nLabel: {}".format(self.data[i], self.labels[i]))
-            print("max_len = {}".format(self.max_len))
-            print("<unk> embedding: {}".format(self.word2idx["<unk>"]))
-            print("==============================")
+        # for i in range(10):
+        #     print("Sentence: {}\nLabel: {}".format(X[i], y[i]))
+        
+        print("max_len = {}".format(self.max_len))
+        print("<unk> embedding: {}".format(self.word2idx["<unk>"]))
+        print("==============================")
 
     def __len__(self):
         """
@@ -91,8 +90,8 @@ class SentenceDataset(Dataset):
 
         # EX3
         item = self.data[index][:self.max_len]
-        item_len = min(len(item), self.max_len) 
+        item_len = min(len(item), self.max_len)
         toks = list(map(
-            lambda x: self.word2idx.get(x.text) or self.word2idx["<unk>"], item
+            lambda x: self.word2idx.get(x) or self.word2idx["<unk>"], item
         ))
         return np.pad(toks, (0, self.max_len - item_len)), self.labels[index], item_len
