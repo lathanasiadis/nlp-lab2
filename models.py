@@ -90,13 +90,13 @@ class LSTM(nn.Module):
             self.embeddings = self.embeddings.from_pretrained(
                 torch.Tensor(embeddings), freeze=True)
 
-        self.linear = nn.Linear(self.representation_size, output_size)
+        self.linear = nn.Linear(2 * self.representation_size, output_size)
 
     def forward(self, x, lengths):
         batch_size, max_length = x.shape
         embeddings = self.embeddings(x)
         X = torch.nn.utils.rnn.pack_padded_sequence(
-            embeddings, lengths, batch_first=True, enforce_sorted=False)
+            embeddings, lengths.cpu(), batch_first=True, enforce_sorted=False)
 
         ht, _ = self.lstm(X)
 
@@ -105,7 +105,11 @@ class LSTM(nn.Module):
 
         # pick the output of the lstm corresponding to the last word
         # TODO: Main-Lab-Q2 (Hint: take actual lengths into consideration)
-        representations = ...
+        
+        avg_pool = ht.sum(dim=1) / lengths[:, None]
+        max_pool = ht.max(dim=1).values
+
+        representations = torch.cat([avg_pool, max_pool], dim=1)
 
         logits = self.linear(representations)
 

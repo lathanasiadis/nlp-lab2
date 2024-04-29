@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 
 from config import EMB_PATH
 from dataloading import SentenceDataset
-from models import BaselineDNN
+from models import BaselineDNN, LSTM
 from early_stopper import EarlyStopper
 from training import train_dataset, eval_dataset, get_metrics_report, torch_train_val_split
 from utils.load_datasets import load_MR, load_Semeval2017A
@@ -96,9 +96,11 @@ test_loader = DataLoader(test_set, batch_size=BATCH_SIZE) # EX7
 #############################################################################
 # Model Definition (Model, Loss Function, Optimizer)
 #############################################################################
-model = BaselineDNN(output_size=n_classes,  # EX8
-                    embeddings=embeddings,
-                    trainable_emb=EMB_TRAINABLE)
+# model = BaselineDNN(output_size=n_classes,  # EX8
+#                     embeddings=embeddings,
+#                     trainable_emb=EMB_TRAINABLE)
+
+model = LSTM(n_classes, embeddings, EMB_TRAINABLE, bidirectional=True)
 
 stopper = EarlyStopper(model, MODEL_PATH, PATIENCE, min_delta=1e-4)
 
