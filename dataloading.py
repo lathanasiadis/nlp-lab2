@@ -16,6 +16,7 @@ class SentenceDataset(Dataset):
     """
 
     def __init__(self, X, y, word2idx, tweets=False, verbose=False):
+
         """
         In the initialization of the dataset we will have to assign the
         input values to the corresponding class attributes

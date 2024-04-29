@@ -1,55 +1,124 @@
 import os
 import warnings
+import argparse
 
-from sklearn.exceptions import UndefinedMetricWarning
-from sklearn.preprocessing import LabelEncoder
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+from sklearn.exceptions import UndefinedMetricWarning
+from sklearn.preprocessing import LabelEncoder
 from matplotlib import pyplot as plt 
 
 from config import EMB_PATH
 from dataloading import SentenceDataset
-from models import BaselineDNN
+from models import BaselineDNN, LSTM
 from early_stopper import EarlyStopper
 from training import train_dataset, eval_dataset, get_metrics_report, torch_train_val_split
 from utils.load_datasets import load_MR, load_Semeval2017A
 from utils.load_embeddings import load_word_vectors
 
-from IPython import embed
+def train_model(model, train_loader, val_loader, criterion, optimizer, print_freq=None):
+    train_losses = []
+    val_losses = []
+    was_early_stop = False
+
+    for epoch in range(1, EPOCHS + 1):
+        # train the model for one epoch
+        train_dataset(epoch, train_loader, model, criterion, optimizer)
+
+        # evaluate the performance of the model, on both data sets
+        train_loss, (y_train_gold, y_train_pred) = eval_dataset(train_loader,
+                                                                model,
+                                                                criterion)
+        val_loss, (y_val_gold, y_val_pred) = eval_dataset(val_loader,
+                                                          model,
+                                                          criterion)
+
+        train_losses.append(train_loss)
+        val_losses.append(val_loss)
+
+        if print_freq is not None and epoch % print_freq == 0:
+            print(f"Epoch: {epoch}")
+            print(f"Train Loss: {train_loss}")
+            print(f"Validation Loss: {val_loss}\n")
+            
+        if stopper.early_stop(val_loss):
+            print("Early stop!")
+            was_early_stop = True
+            break
+    
+    return train_losses, val_losses, was_early_stop
+
+def plot_loss_curves(train_losses, val_losses, was_early_stop, model_name=None):
+    i = len(train_losses)
+    x_axis = range(1, i+1)
+    plt.plot(x_axis, train_losses, label="Train set")
+    plt.plot(x_axis, val_losses, label="Validation set")
+    plt.xticks(x_axis)
+    if was_early_stop:
+        plt.axvline(i - PATIENCE, linestyle="--",
+                    label="Early Stop", color="red")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend()
+    # control maximum number of ticks on x axis
+    plt.gca().xaxis.set_major_locator(plt.MaxNLocator(integer=True, nbins=18))
+    if model_name is not None:
+        plt.savefig("graph_{}.png".format(model_name))
+    plt.show()
 
 warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-m", "--model",
+    choices=["dnn", "lstm", "bilstm"],
+    help="""Model used to predict sentiment. Available options:
+    dnn for a Feed Forward NN with one hidden layer
+    lstm for an LSTM"
+    bilstm for a bidirectional LSTM""",
+    default="dnn"
+)
+parser.add_argument("-d", "--dataset",
+    choices=["mr", "semeval"],
+    help="""Dataset used to train and evaluate the model. Available options:
+    mr for Sentence Polarity Dataset [default]
+    semeval for Semeval 2017 Task4-A""",
+    default="mr"
+)
+parser.add_argument("-v", "--verbose", action="store_true",
+    help="If set, will print some sample label encodings, sentence encodings, etc")
+
+args = parser.parse_args()
+
+DATASET = "MR" if args.dataset == "mr" else "Semeval2017A"
+model_name = args.model
+MODEL_PATH = "model_{}.pt".format(model_name)
+SHOULD_PRINT_PRE = args.verbose
 
 ########################################################
 # Configuration
 ########################################################
-
 
 # Download the embeddings of your choice
 # for example http://nlp.stanford.edu/data/glove.6B.zip
 
 # 1 - point to the pretrained embeddings file (must be in /embeddings folder)
 EMBEDDINGS = os.path.join(EMB_PATH, "glove.6B.50d.txt")
-
 # 2 - set the correct dimensionality of the embeddings
 EMB_DIM = 50
-
 EMB_TRAINABLE = False
 BATCH_SIZE = 128
 EPOCHS = 50
-DATASET = "MR"  # options: "MR", "Semeval2017A"
-
 # if your computer has a CUDA compatible gpu use it, otherwise use the cpu
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-MODEL_PATH = "model_dnn.pt"
+# Early stop parameters
 PATIENCE = 5
-
-SHOULD_PRINT_PRE = False
 
 ########################################################
 # Define PyTorch datasets and dataloaders
 ########################################################
+
+print("Will train a {} model on {}".format(model_name, DATASET))
 
 # load word embeddings
 print("loading word embeddings...")
@@ -96,9 +165,22 @@ test_loader = DataLoader(test_set, batch_size=BATCH_SIZE) # EX7
 #############################################################################
 # Model Definition (Model, Loss Function, Optimizer)
 #############################################################################
-model = BaselineDNN(output_size=n_classes,  # EX8
-                    embeddings=embeddings,
-                    trainable_emb=EMB_TRAINABLE)
+
+if model_name == "dnn":
+    # EX8
+    model = BaselineDNN(output_size=n_classes,
+                        embeddings=embeddings,
+                        trainable_emb=EMB_TRAINABLE)
+elif model_name == "lstm":
+    model = LSTM(output_size=n_classes,
+             embeddings=embeddings,
+             trainable_emb=EMB_TRAINABLE,
+             bidirectional=False)
+elif model_name == "bilstm":
+    model = LSTM(output_size=n_classes,
+             embeddings=embeddings,
+             trainable_emb=EMB_TRAINABLE,
+             bidirectional=True)
 
 stopper = EarlyStopper(model, MODEL_PATH, PATIENCE, min_delta=1e-4)
 
@@ -111,69 +193,15 @@ criterion = nn.CrossEntropyLoss()  # EX8
 parameters = [param for param in model.parameters() if param.requires_grad]  # EX8
 optimizer = torch.optim.Adam(parameters)  # EX8
 
-
 #############################################################################
 # Training Pipeline
 #############################################################################
 
-def train_model(model, train_loader, val_loader, criterion, optimizer, print_freq=None):
-    train_losses = []
-    val_losses = []
-    was_early_stop = False
-
-    for epoch in range(1, EPOCHS + 1):
-        # train the model for one epoch
-        train_dataset(epoch, train_loader, model, criterion, optimizer)
-
-        # evaluate the performance of the model, on both data sets
-        train_loss, (y_train_gold, y_train_pred) = eval_dataset(train_loader,
-                                                                model,
-                                                                criterion)
-        val_loss, (y_val_gold, y_val_pred) = eval_dataset(val_loader,
-                                                          model,
-                                                          criterion)
-
-        train_losses.append(train_loss)
-        val_losses.append(val_loss)
-
-        if print_freq is not None and epoch % print_freq == 0:
-            print(f"Epoch: {epoch}")
-            print(f"Train Loss: {train_loss}")
-            print(f"Validation Loss: {val_loss}\n")
-            
-        if stopper.early_stop(val_loss):
-            print("Early stop!")
-            was_early_stop = True
-            break
-    
-    return train_losses, val_losses, was_early_stop
-
-
-def plot_loss_curves(train_losses, val_losses, was_early_stop, save_path=None):
-    i = len(train_losses)
-    x_axis = range(1, i+1)
-    plt.plot(x_axis, train_losses, label="Train set")
-    plt.plot(x_axis, val_losses, label="Validation set")
-    plt.xticks(x_axis)
-    if was_early_stop:
-        plt.axvline(i - PATIENCE, linestyle="--",
-                    label="Early Stop", color="red")
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.legend()
-    # control maximum number of ticks on x axis
-    plt.gca().xaxis.set_major_locator(plt.MaxNLocator(integer=True, nbins=18))
-    if save_path is not None:
-        plt.savefig(save_path)
-    plt.show()
-
-
 train_losses, val_losses, was_early_stop = train_model(
       model, train_loader, val_loader, criterion, optimizer, print_freq=None)
 
-plot_loss_curves(train_losses, val_losses, was_early_stop)
+plot_loss_curves(train_losses, val_losses, was_early_stop, model_name)
 
-    
 if was_early_stop:
     best = torch.load(MODEL_PATH)
     model.load_state_dict(best)
