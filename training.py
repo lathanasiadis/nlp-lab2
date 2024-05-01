@@ -28,7 +28,7 @@ def progress(loss, epoch, batch, batch_size, dataset_size):
         print()
 
 
-def train_dataset(_epoch, dataloader, model, loss_function, optimizer):
+def train_dataset(_epoch, dataloader, model, loss_function, optimizer, use_lens=True):
     # IMPORTANT: switch to train mode
     # enable regularization layers, such as Dropout
     model.train()
@@ -53,7 +53,11 @@ def train_dataset(_epoch, dataloader, model, loss_function, optimizer):
         optimizer.zero_grad()  # EX9
 
         # Step 2 - forward pass: y' = model(x)
-        pred_y = model(inputs, lengths) # EX9
+        if use_lens:  
+            pred_y = model(inputs, lengths) # EX9
+        else:
+            # Main Lab: transformers don't need lengths in their fwd function
+            pred_y = model(inputs)
 
         # Step 3 - compute loss: L = loss_function(y, y')
         loss = loss_function(pred_y, labels)  # EX9
@@ -76,7 +80,7 @@ def train_dataset(_epoch, dataloader, model, loss_function, optimizer):
     return running_loss / index
 
 
-def eval_dataset(dataloader, model, loss_function):
+def eval_dataset(dataloader, model, loss_function, use_lens=True):
     # IMPORTANT: switch to eval mode
     # disable regularization layers, such as Dropout
     model.eval()
@@ -102,7 +106,10 @@ def eval_dataset(dataloader, model, loss_function):
             lengths = lengths.long().to(DEVICE)
 
             # Step 2 - forward pass: y' = model(x)
-            logits = model(inputs, lengths)  # EX9
+            if use_lens:
+                logits = model(inputs, lengths)  # EX9
+            else:
+                logits = model(inputs) # see train_dataset
 
             # Step 3 - compute loss.
             # We compute the loss only for inspection (compare train/test loss)

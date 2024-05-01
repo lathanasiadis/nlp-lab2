@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from torch import nn
 from torch.nn import functional as F
-
+from config import DEVICE
 
 class Head(nn.Module):
     """ one head of self-attention """
@@ -48,7 +48,7 @@ class FeedFoward(nn.Module):
 
 class SimpleSelfAttentionModel(nn.Module):
 
-    def __init__(self, output_size, embeddings, max_length=60):
+    def __init__(self, output_size, embeddings, max_length):
         super().__init__()
 
         self.n_head = 1
@@ -69,18 +69,18 @@ class SimpleSelfAttentionModel(nn.Module):
         self.ln2 = nn.LayerNorm(dim)
 
         # TODO: Main-lab-Q3 - define output classification layer
-        self.output = ...
+        self.output = nn.Linear(dim, output_size)
 
     def forward(self, x):
         B, T = x.shape
         tok_emb = self.token_embedding_table(x)  # (B,T,C)
-        pos_emb = self.position_embedding_table(torch.arange(T))  # (T,C)
+        pos_emb = self.position_embedding_table(torch.arange(T).to(DEVICE))  # (T,C)
         x = tok_emb + pos_emb  # (B,T,C)
         x = x + self.sa(self.ln1(x))
         x = x + self.ffwd(self.ln2(x))
 
         # TODO: Main-lab-Q3 - avg pooling to get a sentence embedding
-        x = ...  # (B,C)
+        x = torch.mean(x, dim=1)  # (B,C)
 
         logits = self.output(x)  # (C,output)
         return logits

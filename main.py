@@ -12,27 +12,30 @@ from matplotlib import pyplot as plt
 from config import EMB_PATH
 from dataloading import SentenceDataset
 from models import BaselineDNN, LSTM
+from attention import SimpleSelfAttentionModel
 from early_stopper import EarlyStopper
 from training import train_dataset, eval_dataset, get_metrics_report, torch_train_val_split
 from utils.load_datasets import load_MR, load_Semeval2017A
 from utils.load_embeddings import load_word_vectors
 
-def train_model(model, train_loader, val_loader, criterion, optimizer, print_freq=None):
+def train_model(model, train_loader, val_loader, criterion, optimizer, print_freq=None, use_lens=True):
     train_losses = []
     val_losses = []
     was_early_stop = False
 
     for epoch in range(1, EPOCHS + 1):
         # train the model for one epoch
-        train_dataset(epoch, train_loader, model, criterion, optimizer)
+        train_dataset(epoch, train_loader, model, criterion, optimizer, use_lens)
 
         # evaluate the performance of the model, on both data sets
         train_loss, (y_train_gold, y_train_pred) = eval_dataset(train_loader,
                                                                 model,
-                                                                criterion)
+                                                                criterion,
+                                                                use_lens)
         val_loss, (y_val_gold, y_val_pred) = eval_dataset(val_loader,
                                                           model,
-                                                          criterion)
+                                                          criterion,
+                                                          use_lens)
 
         train_losses.append(train_loss)
         val_losses.append(val_loss)
@@ -71,12 +74,14 @@ warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-m", "--model",
-    choices=["dnn", "lstm", "bilstm"],
+    choices=["dnn", "lstm", "bilstm", "simple-tf", "multi-tf"],
     help="""Model used to predict sentiment. Available options:
     dnn for a Feed Forward NN with one hidden layer
     lstm for an LSTM"
-    bilstm for a bidirectional LSTM""",
-    default="dnn"
+    bilstm for a bidirectional LSTM
+    simple-tf for a simple Self Attention Model
+    multi-tf for a multi-head Self Attention Model""",
+    default="simple-tf"
 )
 parser.add_argument("-d", "--dataset",
     choices=["mr", "semeval"],
@@ -155,7 +160,7 @@ if SHOULD_PRINT_PRE:
         print("{}\n{}".format(X_train[i], train_set[i]))
 
 test_set = SentenceDataset(X_test, y_test, word2idx,
-                           tweets=(DATASET == "Semeval2017A"), verbose=SHOULD_PRINT_PRE)
+                           tweets=(DATASET == "Semeval2017A"), verbose=SHOULD_PRINT_PRE, max_len=train_set.max_len)
 
 # EX7 - Define our PyTorch-based DataLoader
 # train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True) # EX7
@@ -166,6 +171,7 @@ test_loader = DataLoader(test_set, batch_size=BATCH_SIZE) # EX7
 # Model Definition (Model, Loss Function, Optimizer)
 #############################################################################
 
+
 if model_name == "dnn":
     # EX8
     model = BaselineDNN(output_size=n_classes,
@@ -173,14 +179,18 @@ if model_name == "dnn":
                         trainable_emb=EMB_TRAINABLE)
 elif model_name == "lstm":
     model = LSTM(output_size=n_classes,
-             embeddings=embeddings,
-             trainable_emb=EMB_TRAINABLE,
-             bidirectional=False)
+                 embeddings=embeddings,
+                 trainable_emb=EMB_TRAINABLE,
+                 bidirectional=False)
 elif model_name == "bilstm":
     model = LSTM(output_size=n_classes,
-             embeddings=embeddings,
-             trainable_emb=EMB_TRAINABLE,
-             bidirectional=True)
+                 embeddings=embeddings,
+                 trainable_emb=EMB_TRAINABLE,
+                 bidirectional=True)
+elif model_name == "simple-tf":
+    model = SimpleSelfAttentionModel(n_classes, embeddings, train_set.max_len)
+elif model_name == "multi-tf":
+    raise NotImplementedError
 
 stopper = EarlyStopper(model, MODEL_PATH, PATIENCE, min_delta=1e-4)
 
@@ -196,9 +206,11 @@ optimizer = torch.optim.Adam(parameters)  # EX8
 #############################################################################
 # Training Pipeline
 #############################################################################
+model_is_tf = (model_name == "simple-tf") or (model_name == "multi-tf")
+use_lens = not model_is_tf
 
 train_losses, val_losses, was_early_stop = train_model(
-      model, train_loader, val_loader, criterion, optimizer, print_freq=None)
+      model, train_loader, val_loader, criterion, optimizer, print_freq=None, use_lens=use_lens)
 
 plot_loss_curves(train_losses, val_losses, was_early_stop, model_name)
 
@@ -208,7 +220,8 @@ if was_early_stop:
     
 test_loss, (y_test_gold, y_test_pred) = eval_dataset(test_loader,
                                                      model,
-                                                     criterion)
+                                                     criterion,
+                                                     use_lens)
 
 print("Classification report (test set)")
 print(get_metrics_report(y_test_gold, y_test_pred))

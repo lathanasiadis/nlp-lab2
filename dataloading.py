@@ -15,7 +15,7 @@ class SentenceDataset(Dataset):
             processed data-item from our dataset with a given index
     """
 
-    def __init__(self, X, y, word2idx, tweets=False, verbose=False):
+    def __init__(self, X, y, word2idx, tweets=False, verbose=False, max_len=None):
 
         """
         In the initialization of the dataset we will have to assign the
@@ -37,10 +37,13 @@ class SentenceDataset(Dataset):
         tokenizer = tt.tokenize if tweets else word_tokenize
         self.data = list(map(tokenizer, X))
         
-        #  90% quantile of sentence length (in number of tokens)
-        lens = list(map(len, self.data))
-        lens.sort()
-        self.max_len = lens[int(0.9 * len(lens))]
+        if max_len is None:
+            #  90% quantile of sentence length (in number of tokens)
+            lens = list(map(len, self.data))
+            lens.sort()
+            self.max_len = lens[int(0.9 * len(lens))]
+        else:
+            self.max_len = max_len
 
         self.labels = y
         self.word2idx = word2idx
