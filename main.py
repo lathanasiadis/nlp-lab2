@@ -12,7 +12,7 @@ from matplotlib import pyplot as plt
 from config import EMB_PATH
 from dataloading import SentenceDataset
 from models import BaselineDNN, LSTM
-from attention import SimpleSelfAttentionModel
+from attention import SimpleSelfAttentionModel, MultiHeadAttentionModel, TransformerEncoderModel
 from early_stopper import EarlyStopper
 from training import train_dataset, eval_dataset, get_metrics_report, torch_train_val_split
 from utils.load_datasets import load_MR, load_Semeval2017A
@@ -74,13 +74,14 @@ warnings.filterwarnings("ignore", category=UndefinedMetricWarning)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-m", "--model",
-    choices=["dnn", "lstm", "bilstm", "simple-tf", "multi-tf"],
+    choices=["dnn", "lstm", "bilstm", "simple-tf", "multi-tf", "encoder-tf"],
     help="""Model used to predict sentiment. Available options:
     dnn for a Feed Forward NN with one hidden layer
     lstm for an LSTM"
     bilstm for a bidirectional LSTM
     simple-tf for a simple Self Attention Model
-    multi-tf for a multi-head Self Attention Model""",
+    multi-tf for a multi-head Self Attention Model
+    encoder-tf for a Transformer Encoder Model""",
     default="simple-tf"
 )
 parser.add_argument("-d", "--dataset",
@@ -90,6 +91,14 @@ parser.add_argument("-d", "--dataset",
     semeval for Semeval 2017 Task4-A""",
     default="mr"
 )
+parser.add_argument("--nheads",
+    help="""Number of heads for multi head attention models. Default = 3""",
+    default=3,
+    type=int)
+parser.add_argument("--nlayers",
+    help="""Number of layers for multi head attention models. Default = 2""",
+    default=2,
+    type=int)
 parser.add_argument("-v", "--verbose", action="store_true",
     help="If set, will print some sample label encodings, sentence encodings, etc")
 
@@ -97,8 +106,11 @@ args = parser.parse_args()
 
 DATASET = "MR" if args.dataset == "mr" else "Semeval2017A"
 model_name = args.model
+IS_MODEL_TF = model_name.endswith("-tf")
 MODEL_PATH = "model_{}.pt".format(model_name)
 SHOULD_PRINT_PRE = args.verbose
+N_HEADS = args.nheads
+N_LAYERS = args.nlayers
 
 ########################################################
 # Configuration
@@ -124,6 +136,10 @@ PATIENCE = 5
 ########################################################
 
 print("Will train a {} model on {}".format(model_name, DATASET))
+if IS_MODEL_TF and model_name != "simple-tf":
+    print("n_heads: {}".format(N_HEADS))
+if model_name == "encoder-tf":
+    print("n_layers: {}".format(N_LAYERS))
 
 # load word embeddings
 print("loading word embeddings...")
@@ -190,7 +206,9 @@ elif model_name == "bilstm":
 elif model_name == "simple-tf":
     model = SimpleSelfAttentionModel(n_classes, embeddings, train_set.max_len)
 elif model_name == "multi-tf":
-    raise NotImplementedError
+    model = MultiHeadAttentionModel(n_classes, embeddings, train_set.max_len, N_HEADS)
+elif model_name == "encoder-tf":
+    model = TransformerEncoderModel(n_classes, embeddings, train_set.max_len, N_HEADS, N_LAYERS)
 
 stopper = EarlyStopper(model, MODEL_PATH, PATIENCE, min_delta=1e-4)
 
@@ -206,8 +224,8 @@ optimizer = torch.optim.Adam(parameters)  # EX8
 #############################################################################
 # Training Pipeline
 #############################################################################
-model_is_tf = (model_name == "simple-tf") or (model_name == "multi-tf")
-use_lens = not model_is_tf
+
+use_lens = not IS_MODEL_TF
 
 train_losses, val_losses, was_early_stop = train_model(
       model, train_loader, val_loader, criterion, optimizer, print_freq=None, use_lens=use_lens)
