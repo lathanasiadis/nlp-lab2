@@ -48,16 +48,6 @@ LABELS_MAPPING = {
         'NEG': 'negative',
         'NEU': 'neutral',
     },
-    "soleimanian/financial-roberta-large-sentiment": {
-        "positive": "positive",
-        "negative": "negative",
-        "neutral": "neutral",
-    },
-    "ahmedrachid/FinancialBERT-Sentiment-Analysis": {
-        "positive": "positive",
-        "negative": "negative",
-        "neutral": "neutral",
-    },
 }
 
 if __name__ == '__main__':
@@ -83,7 +73,8 @@ if __name__ == '__main__':
     for x in tqdm(X_test):
         # TODO: Main-lab-Q6 - get the label using the defined pipeline
         label = sentiment_pipeline(x)[0]['label']
-        y_pred.append(LABELS_MAPPING[PRETRAINED_MODEL][label])
+        y_pred.append(LABELS_MAPPING[PRETRAINED_MODEL][label]
+                      if PRETRAINED_MODEL in LABELS_MAPPING else label)
 
     y_pred = le.transform(y_pred)
     print(f'\nDataset: {DATASET}\nPre-Trained model: {PRETRAINED_MODEL}\nTest set evaluation\n{get_metrics_report([y_test], [y_pred])}')
