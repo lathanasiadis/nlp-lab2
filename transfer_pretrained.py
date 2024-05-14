@@ -49,6 +49,7 @@ LABELS_MAPPING = {
         'NEU': 'neutral',
     },
 }
+BATCH_SIZE = 128
 
 if __name__ == '__main__':
     # load the raw data
@@ -67,7 +68,7 @@ if __name__ == '__main__':
     n_classes = len(list(le.classes_))
 
     # define a proper pipeline
-    sentiment_pipeline = pipeline("sentiment-analysis", model=PRETRAINED_MODEL)
+    sentiment_pipeline = pipeline("sentiment-analysis", model=PRETRAINED_MODEL, device=0, batch_size=BATCH_SIZE)
 
     y_pred = []
     for x in tqdm(X_test):
