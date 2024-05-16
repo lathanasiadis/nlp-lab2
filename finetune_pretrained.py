@@ -13,7 +13,7 @@ parser.add_argument("-m", "--model",
     choices=["bert-base-cased", "roberta-base", 'roberta-large',
              'gpt2', 'xlnet-base-cased', 'distilbert-base-cased'],
     help="""Pretrained model""",
-    default="twitter_roberta"
+    default="bert-base-cased"
 )
 parser.add_argument("-d", "--dataset",
     choices=["mr", "semeval"],
