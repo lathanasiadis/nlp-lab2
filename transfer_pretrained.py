@@ -9,13 +9,14 @@ import argparse
 parser = argparse.ArgumentParser()
 
 parser.add_argument("-m", "--model",
-    choices=["twitter_roberta", "roberta_large", "bertweet", "financial"],
-    help="""Pretrained model""",
+    choices=["twitter_roberta", "roberta_large", "bertweet",
+             "financial", "amazon_reviews"],
+    help="Pretrained model",
     default="twitter_roberta"
 )
 parser.add_argument("-d", "--dataset",
     choices=["mr", "semeval"],
-    help="""Dataset used to train and evaluate the model.""",
+    help="Dataset used to train and evaluate the model.",
     default="semeval"
 )
 
@@ -25,7 +26,8 @@ args = parser.parse_args()
 args_to_models = {"twitter_roberta": 'cardiffnlp/twitter-roberta-base-sentiment',
                   "roberta_large": 'siebert/sentiment-roberta-large-english',
                   "bertweet": "finiteautomata/bertweet-base-sentiment-analysis",
-                  "financial": "ahmedrachid/FinancialBERT-Sentiment-Analysis"}
+                  "financial": "ahmedrachid/FinancialBERT-Sentiment-Analysis",
+                  "amazon_reviews": "LiYuan/amazon-review-sentiment-analysis"}
                   
 
 PRETRAINED_MODEL = args_to_models[args.model]
@@ -48,8 +50,14 @@ LABELS_MAPPING = {
         'NEG': 'negative',
         'NEU': 'neutral',
     },
+    'LiYuan/amazon-review-sentiment-analysis': {
+        '1 star': 'negative',
+        '2 stars': 'negative',
+        '3 stars': 'neutral',
+        '4 stars': 'positive',
+        '5 stars': 'positive',
+    },
 }
-BATCH_SIZE = 128
 
 if __name__ == '__main__':
     # load the raw data
@@ -68,14 +76,21 @@ if __name__ == '__main__':
     n_classes = len(list(le.classes_))
 
     # define a proper pipeline
-    sentiment_pipeline = pipeline("sentiment-analysis", model=PRETRAINED_MODEL, device=0, batch_size=BATCH_SIZE)
+    sentiment_pipeline = pipeline("sentiment-analysis", model=PRETRAINED_MODEL, top_k=2,
+                                  device=0, batch_size=128)
 
     y_pred = []
     for x in tqdm(X_test):
         # TODO: Main-lab-Q6 - get the label using the defined pipeline
-        label = sentiment_pipeline(x)[0]['label']
-        y_pred.append(LABELS_MAPPING[PRETRAINED_MODEL][label]
-                      if PRETRAINED_MODEL in LABELS_MAPPING else label)
+        first_pred, second_pred = sentiment_pipeline(x)[0]
+        label = (LABELS_MAPPING[PRETRAINED_MODEL][first_pred['label']]
+                      if PRETRAINED_MODEL in LABELS_MAPPING else first_pred['label'])
+        # for the MR dataset we don't have 'neutral' labels, so if a model predicts
+        # 'neutral' we take the second best prediction
+        if DATASET == "MR" and label == "neutral":
+            label = (LABELS_MAPPING[PRETRAINED_MODEL][second_pred['label']]
+                      if PRETRAINED_MODEL in LABELS_MAPPING else second_pred['label'])            
+        y_pred.append(label)
 
     y_pred = le.transform(y_pred)
     print(f'\nDataset: {DATASET}\nPre-Trained model: {PRETRAINED_MODEL}\nTest set evaluation\n{get_metrics_report([y_test], [y_pred])}')
