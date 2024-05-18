@@ -4,9 +4,28 @@ from datasets import Dataset
 from transformers import TrainingArguments, Trainer, AutoTokenizer, AutoModelForSequenceClassification
 from sklearn.preprocessing import LabelEncoder
 from utils.load_datasets import load_MR, load_Semeval2017A
+import argparse
 
 
-DATASET = 'MR'  # 'MR' or 'Semeval2017A'
+parser = argparse.ArgumentParser()
+
+parser.add_argument("-m", "--model",
+    choices=["bert-base-cased", "roberta-base", 'roberta-large',
+             'gpt2', 'xlnet-base-cased', 'distilbert-base-cased'],
+    help="""Pretrained model""",
+    default="bert-base-cased"
+)
+parser.add_argument("-d", "--dataset",
+    choices=["mr", "semeval"],
+    help="""Dataset used to train and evaluate the model.""",
+    default="semeval"
+)
+
+
+args = parser.parse_args()
+
+
+DATASET = "MR" if args.dataset == "mr" else "Semeval2017A"
 PRETRAINED_MODEL = 'bert-base-cased'
 
 
