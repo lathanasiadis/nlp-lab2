@@ -128,7 +128,7 @@ class MultiHeadAttentionModel(nn.Module):
         # After final linear layer: N x output_size
 
         # Our embedding dimension (50) is not divisible with some n_heads (e.g 3)
-        # so we use `dim` as head_size (todo: ask if correct?)
+        # so we use `dim` as head_size
 
         self.heads = MultiHeadAttention(n_head, dim, dim)
         self.ffwd = FeedFoward(dim)
@@ -185,7 +185,6 @@ class TransformerEncoderModel(nn.Module):
             torch.FloatTensor(embeddings), freeze=True)
         self.pos_embeddings = nn.Embedding(self.max_length, dim)
 
-        # TODO: same as multi-tf
         head_size = dim
         self.blocks = nn.Sequential(
             *[Block(n_head, head_size, dim) for _ in range(n_layer)])

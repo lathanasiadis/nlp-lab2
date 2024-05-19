@@ -32,7 +32,9 @@ class BaselineDNN(nn.Module):
             freeze=not trainable_emb)
 
         # 4 - define a non-linear transformation of the representations
-        self.lin1 = nn.Linear(embeddings_dim, hidden_size)
+        # input size is 2*embeddings_dim because we concatenate mean and max pooling
+        # representations
+        self.lin1 = nn.Linear(2*embeddings_dim, hidden_size)
         self.act = nn.ReLU()  # EX5
 
         # 5 - define the final Linear layer which maps
@@ -55,7 +57,11 @@ class BaselineDNN(nn.Module):
         # At this point, a BATCH_SIZE * EMB_DIM has sums of sentence
         # embeddings in each row. By dividing each row with
         # its non-padded length, we get an average sentence embedding
-        representations = representations / lengths[:, None]
+        mean_pool = representations / lengths[:, None]
+        # torch.max returns both values and indices
+        max_pool = embeddings.max(dim=1).values
+
+        representations = torch.cat([mean_pool, max_pool], dim=1)
 
         # 3 - transform the representations to new ones.
         representations = self.act(self.lin1(representations)) # EX6
